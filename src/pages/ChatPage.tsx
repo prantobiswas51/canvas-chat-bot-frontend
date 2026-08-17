@@ -5,9 +5,36 @@ import ChatWindow from '@/features/chat/components/ChatWindow';
 import CustomerInfoPanel from '@/features/chat/components/CustomerInfoPanel';
 import InboxCategoryNavBar from '@/features/chat/components/InboxCategoryNavBar';
 import chatService from '@/services/chatService';
+import userService from '@/services/userService';
 import { getSocket } from '@/services/socket';
 import { withDummyCrmData } from '@/features/chat/utils/dummyCustomerCrm';
-import { Conversation, ConversationCategory, ConversationStatus, ChatMessage, ChatAttachment } from '@/types/chat';
+import { Conversation, ConversationCategory, ConversationStatus, ChatMessage, ChatAttachment, Moderator } from '@/types/chat';
+import { User, UserRole } from '@/types/auth';
+
+// The Moderator type (used for the chat assignment dropdown) has a richer,
+// display-oriented role set than the auth UserRole enum — map between them.
+function toModeratorRole(role: UserRole): Moderator['role'] {
+  switch (role) {
+    case 'superadmin':
+    case 'admin':
+      return 'Senior Moderator';
+    case 'manager':
+      return 'Sales Executive';
+    default:
+      return 'Support Specialist';
+  }
+}
+
+function toModerator(user: User): Moderator {
+  return {
+    id: user.id,
+    name: user.name,
+    avatar: user.avatarUrl,
+    role: toModeratorRole(user.role),
+    status: 'online',
+    isAi: false,
+  };
+}
 
 export const ChatPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<ConversationCategory>('all');
@@ -17,6 +44,7 @@ export const ChatPage: React.FC = () => {
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [moderators, setModerators] = useState<Moderator[]>([]);
 
   // Read inside socket callbacks registered once on mount — a ref keeps them
   // seeing the latest selection without re-subscribing on every change.
@@ -46,6 +74,16 @@ export const ChatPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Load the team roster once for the "Assign Moderator" dropdown.
+  useEffect(() => {
+    userService
+      .getAll()
+      .then((users) => setModerators(users.map(toModerator)))
+      .catch(() => {
+        // Non-critical — the assign dropdown just stays empty if this fails.
+      });
   }, []);
 
   // Load the thread whenever a different conversation is selected.
@@ -144,6 +182,31 @@ export const ChatPage: React.FC = () => {
     [selectedConversationId],
   );
 
+  const handleAssignModerator = useCallback(
+    async (moderatorId: string) => {
+      if (!selectedConversationId) return;
+
+      const previous = conversations.find((c) => c.id === selectedConversationId)?.assignedModeratorId;
+
+      // Optimistic update — revert if the save fails.
+      setConversations((prev) =>
+        prev.map((c) => (c.id === selectedConversationId ? { ...c, assignedModeratorId: moderatorId } : c)),
+      );
+
+      try {
+        await chatService.assignModerator(selectedConversationId, moderatorId);
+      } catch {
+        setError('Could not assign the moderator.');
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === selectedConversationId ? { ...c, assignedModeratorId: previous } : c,
+          ),
+        );
+      }
+    },
+    [selectedConversationId, conversations],
+  );
+
   const selectedConversation = conversations.find((c) => c.id === selectedConversationId);
 
   return (
@@ -179,6 +242,8 @@ export const ChatPage: React.FC = () => {
                   conversation={{ ...selectedConversation, messages: isLoadingMessages ? [] : messages }}
                   onSendMessage={handleSendMessage}
                   onToggleStatus={handleToggleStatus}
+                  onAssignModerator={handleAssignModerator}
+                  moderators={moderators}
                 />
 
                 <CustomerInfoPanel

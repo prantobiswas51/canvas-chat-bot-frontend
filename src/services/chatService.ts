@@ -28,6 +28,10 @@ export const chatService = {
   async updateStatus(conversationId: string, status: ConversationStatus): Promise<void> {
     await apiClient.patch(`/conversations/${conversationId}/status`, { status });
   },
+
+  async assignModerator(conversationId: string, moderatorId: string): Promise<void> {
+    await apiClient.patch(`/conversations/${conversationId}/assign`, { moderatorId });
+  },
 };
 
 export default chatService;

@@ -1,25 +1,10 @@
-import React, { useState } from 'react';
-import { Search, PackageCheck, Copy, Check, Tag, Send, Plus, GripVertical, Sparkles, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, PackageCheck, Copy, Check, Tag, Send, Plus, GripVertical, Sparkles, X, Loader2, AlertCircle } from 'lucide-react';
 import { Offer } from '@/types/offer';
 import { MOCK_OFFERS, offerService } from '@/services/offerService';
+import { productService, InventoryItem } from '@/services/productService';
 
-export interface InventoryItem {
-  id: string;
-  sku: string;
-  name: string;
-  price: number;
-  currency: string;
-  stock: number;
-  imageUrl?: string;
-}
-
-const TEMPORARY_MOCK_PRODUCTS: InventoryItem[] = [
-  { id: 'temp-1', sku: 'CNV-ACR-500', name: 'Canvas Heavy Body Acrylic Paint Set (12 x 75ml)', price: 1450, currency: 'BDT', stock: 45, imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=300&auto=format&fit=crop&q=80' },
-  { id: 'temp-2', sku: 'CNV-WTR-24P', name: 'Canvas Artists Water Colour Pan Set (24 Half Pans)', price: 2200, currency: 'BDT', stock: 18, imageUrl: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&auto=format&fit=crop&q=80' },
-  { id: 'temp-3', sku: 'CNV-BRS-SYN6', name: 'Canvas Masterstroke Synthetic Sable Brush Set (6 Pcs)', price: 890, currency: 'BDT', stock: 60, imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=80' },
-  { id: 'temp-4', sku: 'CNV-BRS-HOG8', name: 'Canvas Imperial Hog Bristle Brush Set (5 Pcs)', price: 1150, currency: 'BDT', stock: 25, imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300&auto=format&fit=crop&q=80' },
-  { id: 'temp-5', sku: 'CNV-OIL-PRO6', name: 'Canvas Classic Oil Colour Starter Set (6 x 37ml)', price: 1850, currency: 'BDT', stock: 12, imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=300&auto=format&fit=crop&q=80' },
-];
+export type { InventoryItem };
 
 export interface TemporaryInventoryWidgetProps {
   className?: string;
@@ -46,11 +31,51 @@ export const TemporaryInventoryWidget: React.FC<TemporaryInventoryWidgetProps> =
     validUntil: '31 Dec 2026',
   });
 
-  const filteredProducts = TEMPORARY_MOCK_PRODUCTS.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Live product search — hits the store's real catalog API on the backend
+  // (debounced) instead of filtering static mock data.
+  const [products, setProducts] = useState<InventoryItem[]>([]);
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+  const [productError, setProductError] = useState<string | null>(null);
+  const searchRequestId = useRef(0);
+
+  useEffect(() => {
+    if (activeTab !== 'products') return;
+
+    // Don't hit the catalog API until the moderator has actually typed
+    // something — avoids an unnecessary request on every panel open.
+    if (!searchQuery.trim()) {
+      searchRequestId.current += 1;
+      setProducts([]);
+      setIsSearchingProducts(false);
+      setProductError(null);
+      return;
+    }
+
+    const requestId = ++searchRequestId.current;
+    setIsSearchingProducts(true);
+    setProductError(null);
+
+    const timer = setTimeout(() => {
+      productService
+        .search(searchQuery)
+        .then((results) => {
+          if (searchRequestId.current !== requestId) return; // stale response
+          setProducts(results);
+        })
+        .catch(() => {
+          if (searchRequestId.current !== requestId) return;
+          setProductError('Could not load products. Please try again.');
+        })
+        .finally(() => {
+          if (searchRequestId.current !== requestId) return;
+          setIsSearchingProducts(false);
+        });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeTab]);
+
+  const filteredProducts = products;
 
   const filteredOffers = offersList.filter(
     (offer) =>
@@ -234,9 +259,19 @@ export const TemporaryInventoryWidget: React.FC<TemporaryInventoryWidgetProps> =
       <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
         {/* PRODUCTS TAB CONTENT */}
         {activeTab === 'products' && (
-          filteredProducts.length === 0 ? (
+          isSearchingProducts ? (
+            <div className="p-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Searching products...
+            </div>
+          ) : productError ? (
+            <div className="p-4 flex items-center justify-center gap-1.5 text-xs text-red-500 text-center">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {productError}
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="p-4 text-center text-xs text-slate-500">
-              No products match "{searchQuery}"
+              {searchQuery ? `No products match "${searchQuery}"` : 'Type to search the product catalog'}
             </div>
           ) : (
             filteredProducts.map((prod) => (
@@ -244,7 +279,9 @@ export const TemporaryInventoryWidget: React.FC<TemporaryInventoryWidgetProps> =
                 key={prod.id}
                 draggable
                 onDragStart={(e) => {
-                  const txt = `📦 **Product Inquiry**: ${prod.name} (SKU: \`${prod.sku}\`) - Price: ৳${prod.price} BDT [In Stock: ${prod.stock}]`;
+                  const txt = `📦 **Product Inquiry**: ${prod.name} (SKU: \`${prod.sku}\`) - Price: ৳${prod.price} BDT [In Stock: ${prod.stock}]${
+                    prod.url ? `\n🔗 ${prod.url}` : ''
+                  }`;
                   e.dataTransfer.setData('text/plain', txt);
                   e.dataTransfer.setData('application/json', JSON.stringify({ type: 'product', product: prod }));
                   e.dataTransfer.effectAllowed = 'copy';

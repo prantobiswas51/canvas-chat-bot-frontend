@@ -3,23 +3,22 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import { 
-  Bot, 
-  Save, 
-  Server, 
-  ShieldAlert, 
-  Sparkles, 
-  Settings as SettingsIcon, 
-  Database, 
-  ChevronRight, 
-  Activity, 
-  CheckCircle2, 
-  Key, 
-  RefreshCw, 
-  Globe, 
-  Lock
+import {
+  Bot,
+  Save,
+  Server,
+  ShieldAlert,
+  Sparkles,
+  Settings as SettingsIcon,
+  Database,
+  ChevronRight,
+  Activity,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import AITrainingHub from '@/components/AITrainingHub';
+import ChannelsPanel from '@/components/settings/ChannelsPanel';
+import AiInstructionsPanel from '@/components/settings/AiInstructionsPanel';
 
 export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'training' | 'system'>('system');
@@ -185,45 +184,18 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </Card>
 
-              {/* Card 2: Social Media Channel Webhook Tokens */}
-              <Card className="p-6 space-y-4">
-                <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3.5 text-indigo-500">
-                  <Globe className="w-5 h-5 text-indigo-500" />
-                  <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">Channel Integration Secrets</h3>
-                </div>
-
-                <div className="space-y-4 text-xs">
-                  <div className="space-y-1.5">
-                    <label className="block font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-emerald-500" /> WhatsApp Cloud API Permanent Token
-                    </label>
-                    <input
-                      type="password"
-                      value="EAAG14920491823901238910283901"
-                      readOnly
-                      className="w-full bg-slate-100 dark:bg-[#0E0D21] border border-slate-300 dark:border-[#27264D] rounded-xl px-3.5 py-2 font-mono text-slate-400 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-sky-500" /> Meta App Secret (FB Messenger & IG Graph)
-                    </label>
-                    <input
-                      type="password"
-                      value="sec_fb_99812401823901823"
-                      readOnly
-                      className="w-full bg-slate-100 dark:bg-[#0E0D21] border border-slate-300 dark:border-[#27264D] rounded-xl px-3.5 py-2 font-mono text-slate-400 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </Card>
+              {/* Card 2: Connected Channels (WhatsApp / Messenger / Instagram) */}
+              <ChannelsPanel />
 
             </div>
 
             {/* RIGHT COLUMN: AI Persona Parameters & Human Handoff Rules (5 Cols) */}
             <div className="lg:col-span-5 space-y-6">
-              
+
+              {/* Real, live-editable AI instructions — everything else on this
+                  page (and the Training Hub tab) is still a visual mockup. */}
+              <AiInstructionsPanel />
+
               {/* Card 3: Canvas AI Bot Configuration */}
               <Card className="p-6 space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-3.5 text-[#F81B57]">

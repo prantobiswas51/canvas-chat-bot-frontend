@@ -7,6 +7,7 @@ import ChatPage from '@/pages/ChatPage';
 import CommentsPage from '@/pages/CommentsPage';
 import OrdersPage from '@/pages/OrdersPage';
 import InventoryPage from '@/pages/InventoryPage';
+import UsersPage from '@/pages/UsersPage';
 import SettingsPage from '@/pages/SettingsPage';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
       {
         path: '/dashboard',
         element: <DashboardPage />,
+      },
+      {
+        path: '/users',
+        element: <UsersPage />,
       },
       {
         path: '/settings',

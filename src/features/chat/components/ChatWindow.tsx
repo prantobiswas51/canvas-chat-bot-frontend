@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Conversation, ConversationStatus, ChatAttachment, Moderator } from '@/types/chat';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import { Send, Bot, UserCheck, AlertTriangle, Paperclip, Smile, X, FileText, Image as ImageIcon, Shield, ChevronDown, Megaphone } from 'lucide-react';
+import { Send, Bot, UserCheck, AlertTriangle, Paperclip, Smile, X, FileText, Image as ImageIcon, Shield, ChevronDown, Megaphone, ZoomIn } from 'lucide-react';
 
 export interface ChatWindowProps {
   conversation: Conversation;
@@ -31,6 +31,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showModeratorDropdown, setShowModeratorDropdown] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +40,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation.messages]);
+
+  useEffect(() => {
+    if (!previewImage) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewImage(null);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [previewImage]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -128,7 +138,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const payload = JSON.parse(jsonStr);
         if (payload.type === 'product' && payload.product) {
           const prod = payload.product;
-          const text = `📦 **Product Inquiry**: ${prod.name}\nSKU: \`${prod.sku}\` | Price: ৳${prod.price} ${prod.currency || 'BDT'} [In Stock: ${prod.stock}]`;
+          const text = `📦 **Product Inquiry**: ${prod.name}\nSKU: \`${prod.sku}\` | Price: ৳${prod.price} ${prod.currency || 'BDT'} [In Stock: ${prod.stock}]${
+            prod.url ? `\n🔗 ${prod.url}` : ''
+          }`;
           const attachment: ChatAttachment | undefined = prod.imageUrl
             ? {
                 name: prod.name,
@@ -389,13 +401,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 {msg.attachment && (
                   <div className="mt-2 pt-2 border-t border-slate-200/40 dark:border-slate-700/50">
                     {msg.attachment.type === 'image' ? (
-                      <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-w-xs">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewImage({ url: msg.attachment!.url, name: msg.attachment!.name })}
+                        className="group relative block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-w-xs cursor-zoom-in"
+                      >
                         <img src={msg.attachment.url} alt={msg.attachment.name} className="w-full h-auto max-h-48 object-cover" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                          <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                         <div className="p-1.5 bg-slate-900/60 text-[10px] text-white flex items-center justify-between font-mono">
                           <span className="truncate">{msg.attachment.name}</span>
                           <span>{msg.attachment.size}</span>
                         </div>
-                      </div>
+                      </button>
                     ) : (
                       <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-950/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                         <FileText className="w-4 h-4 text-[#F81B57] shrink-0" />
@@ -536,6 +555,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           Send
         </Button>
       </form>
+
+      {/* Image Lightbox */}
+      {previewImage && (
+        <div
+          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6 cursor-zoom-out animate-in fade-in duration-150"
+        >
+          <button
+            type="button"
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+            title="Close (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <img
+            src={previewImage.url}
+            alt={previewImage.name}
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default"
+          />
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-5 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/60 text-white text-xs font-mono"
+          >
+            {previewImage.name}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
