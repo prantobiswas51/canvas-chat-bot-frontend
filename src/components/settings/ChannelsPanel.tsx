@@ -60,8 +60,7 @@ export const ChannelsPanel: React.FC = () => {
     loadChannels();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!form.externalAccountId.trim() || !form.displayName.trim()) return;
 
     setIsSaving(true);
@@ -158,10 +157,11 @@ export const ChannelsPanel: React.FC = () => {
       )}
 
       {isFormOpen && (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4 p-4 bg-slate-50 dark:bg-[#0E0D21] border border-slate-200 dark:border-[#27264D] rounded-xl"
-        >
+        // Plain div, not a <form> — this panel is rendered inside SettingsPage's
+        // own outer <form>, and HTML forbids nested forms (the browser drops the
+        // inner one, so a nested submit button silently submits the *outer* mock
+        // form instead of actually saving the channel — see handleSubmit below).
+        <div className="space-y-4 p-4 bg-slate-50 dark:bg-[#0E0D21] border border-slate-200 dark:border-[#27264D] rounded-xl">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">Channel Type</label>
             <div className="flex items-center gap-2">
@@ -214,16 +214,17 @@ export const ChannelsPanel: React.FC = () => {
               Cancel
             </Button>
             <Button
-              type="submit"
+              type="button"
               variant="primary"
               size="sm"
               isLoading={isSaving}
+              onClick={handleSubmit}
               leftIcon={!isSaving ? <Plus className="w-3.5 h-3.5" /> : undefined}
             >
               {isSaving ? 'Saving...' : 'Save Channel'}
             </Button>
           </div>
-        </form>
+        </div>
       )}
 
       {isLoading ? (
