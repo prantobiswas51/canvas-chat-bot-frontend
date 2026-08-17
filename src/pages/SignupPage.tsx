@@ -5,23 +5,14 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
-import userService from '@/services/userService';
-import { UserRole } from '@/types/auth';
-import { User as UserIcon, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
-
-const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'superadmin', label: 'Super Admin' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'manager', label: 'Manager' },
-  { value: 'moderator', label: 'Moderator' },
-];
+import authService from '@/services/authService';
+import { User as UserIcon, Mail, Lock, ArrowRight, Info } from 'lucide-react';
 
 export const SignupPage: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('moderator');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,8 +34,8 @@ export const SignupPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await userService.signup({ name, email, password, role });
-      showToast('Account created — please sign in.');
+      await authService.signup(name, email, password);
+      showToast('Account created — an admin needs to approve access before you can sign in.');
       navigate('/login');
     } catch (err) {
       const axiosErr = err as AxiosError<{ message?: string | string[] }>;
@@ -59,7 +50,7 @@ export const SignupPage: React.FC = () => {
     <Card className="p-6 md:p-8 space-y-6 bg-slate-900/90 border-slate-800 shadow-2xl">
       <div className="space-y-1 text-center">
         <h2 className="text-xl font-bold text-slate-100 tracking-tight">Create Account</h2>
-        <p className="text-xs text-slate-400">Set up dashboard access for your team</p>
+        <p className="text-xs text-slate-400">Request dashboard access for your team</p>
       </div>
 
       <form onSubmit={handleSignup} className="space-y-4">
@@ -102,27 +93,9 @@ export const SignupPage: React.FC = () => {
           required
         />
 
-        <div className="w-full">
-          <label htmlFor="role" className="block text-xs font-medium text-slate-300 mb-1.5">
-            Role
-          </label>
-          <div className="relative flex items-center">
-            <div className="absolute left-3 text-slate-400 pointer-events-none flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full appearance-none bg-slate-900/90 border border-slate-800 text-slate-100 rounded-lg text-sm px-3.5 py-2 pl-10 transition duration-150 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-            >
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-start gap-2 text-[11px] text-slate-400 bg-slate-800/60 border border-slate-700/60 rounded-lg px-3 py-2.5">
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>New accounts start with no dashboard access. An existing admin will assign you a role before you can sign in.</span>
         </div>
 
         {error && (

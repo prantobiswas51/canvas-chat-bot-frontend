@@ -15,6 +15,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'manager', label: 'Manager' },
   { value: 'moderator', label: 'Moderator' },
+  { value: 'member', label: 'Member (no dashboard access)' },
 ];
 
 const ROLE_BADGE_VARIANT: Record<UserRole, BadgeProps['variant']> = {
@@ -22,6 +23,9 @@ const ROLE_BADGE_VARIANT: Record<UserRole, BadgeProps['variant']> = {
   admin: 'success',
   manager: 'info',
   moderator: 'indigo',
+  // Default role for public self-signups — flagged distinctly so an admin
+  // can spot accounts still waiting to be assigned a real role.
+  member: 'neutral',
 };
 
 interface UserFormState {

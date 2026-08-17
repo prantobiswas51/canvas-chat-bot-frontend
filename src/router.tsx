@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import PublicLayout from '@/layouts/PublicLayout';
+import RequireAuth from '@/components/auth/RequireAuth';
 
 import DashboardPage from '@/pages/DashboardPage';
 import ChatPage from '@/pages/ChatPage';
@@ -11,6 +12,7 @@ import UsersPage from '@/pages/UsersPage';
 import SettingsPage from '@/pages/SettingsPage';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import NotFoundPage from '@/pages/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -32,38 +34,54 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    element: <DashboardLayout />,
+    // Standalone — deliberately outside both PublicLayout (which redirects
+    // signed-in users away) and RequireAuth, so it's reachable by anyone
+    // regardless of login state. Meta's App Review needs a working Privacy
+    // Policy URL it can load without an account.
+    path: '/privacy-policy',
+    element: <PrivacyPolicyPage />,
+  },
+  {
+    // No valid session -> /login. A 'member' account (default for public
+    // signup) gets a blocked "Access Pending" screen instead of any of the
+    // routes below — see RequireAuth.
+    element: <RequireAuth />,
     children: [
-      // Shared Routes (Accessible by Admin and Moderator)
       {
-        path: '/chat',
-        element: <ChatPage />,
-      },
-      {
-        path: '/comments',
-        element: <CommentsPage />,
-      },
-      {
-        path: '/orders',
-        element: <OrdersPage />,
-      },
-      {
-        path: '/inventory',
-        element: <InventoryPage />,
-      },
+        element: <DashboardLayout />,
+        children: [
+          // Shared Routes (Accessible by Admin and Moderator)
+          {
+            path: '/chat',
+            element: <ChatPage />,
+          },
+          {
+            path: '/comments',
+            element: <CommentsPage />,
+          },
+          {
+            path: '/orders',
+            element: <OrdersPage />,
+          },
+          {
+            path: '/inventory',
+            element: <InventoryPage />,
+          },
 
-      // Dev phase: no role gating — every role can see every route.
-      {
-        path: '/dashboard',
-        element: <DashboardPage />,
-      },
-      {
-        path: '/users',
-        element: <UsersPage />,
-      },
-      {
-        path: '/settings',
-        element: <SettingsPage />,
+          // Dev phase: no per-route role gating beyond the member block above.
+          {
+            path: '/dashboard',
+            element: <DashboardPage />,
+          },
+          {
+            path: '/users',
+            element: <UsersPage />,
+          },
+          {
+            path: '/settings',
+            element: <SettingsPage />,
+          },
+        ],
       },
     ],
   },

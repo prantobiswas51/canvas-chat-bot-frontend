@@ -1,8 +1,17 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet, Link } from 'react-router-dom';
 import CanvasLogo from '@/components/common/CanvasLogo';
+import { useAuth } from '@/context/AuthContext';
 
 export const PublicLayout: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
+  // Already signed in — no reason to show login/signup again. RequireAuth
+  // handles the 'member'-blocked screen on the other side of this redirect.
+  if (isAuthenticated) {
+    return <Navigate to="/chat" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-[#0F0F23] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       {/* Background glow effects matching logo crimson theme */}
@@ -20,8 +29,13 @@ export const PublicLayout: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <footer className="mt-8 text-center text-xs text-slate-500 z-10 font-mono">
-        &copy; {new Date().getFullYear()} Canvas Art Supplies Ltd. Powered by AI Customer Service & NestJS.
+      <footer className="mt-8 text-center text-xs text-slate-500 z-10 font-mono space-y-1.5">
+        <p>&copy; {new Date().getFullYear()} Canvas Art Supplies Ltd. Powered by AI Customer Service & NestJS.</p>
+        <p>
+          <Link to="/privacy-policy" className="text-slate-500 hover:text-[#FF1E56] hover:underline">
+            Privacy &amp; Policy
+          </Link>
+        </p>
       </footer>
     </div>
   );

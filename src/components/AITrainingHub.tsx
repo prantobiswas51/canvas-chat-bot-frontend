@@ -576,14 +576,16 @@ export const AITrainingHub: React.FC = () => {
                   {/* Toggle Switch */}
                   <button
                     type="button"
+                    role="switch"
+                    aria-checked={enforceKISS}
                     onClick={() => setEnforceKISS(!enforceKISS)}
-                    className={`w-10 h-5.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                    className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                       enforceKISS ? 'bg-[#F81B57]' : 'bg-slate-300 dark:bg-slate-700'
                     }`}
                   >
                     <span
-                      className={`w-3.5 h-3.5 bg-white rounded-full absolute top-1 transition-transform ${
-                        enforceKISS ? 'translate-x-5' : 'translate-x-1'
+                      className={`w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-transform ${
+                        enforceKISS ? 'translate-x-4' : 'translate-x-0'
                       }`}
                     />
                   </button>

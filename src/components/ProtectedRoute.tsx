@@ -13,7 +13,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, role, showToast } = useAuth();
 
-  const isAllowed = user && allowedRoles.includes(role);
+  const isAllowed = !!user && !!role && allowedRoles.includes(role);
 
   useEffect(() => {
     if (!isAllowed) {

@@ -1,15 +1,19 @@
 import apiClient from '@/services/apiClient';
 
+export type AiProviderName = 'openai' | 'gemini' | 'claude';
+
 export interface AiSettings {
   id: string;
   customInstructions?: string;
   aiEnabledByDefault: boolean;
+  aiProvider: AiProviderName;
   updatedAt: string;
 }
 
 export interface UpdateAiSettingsPayload {
   customInstructions?: string;
   aiEnabledByDefault?: boolean;
+  aiProvider?: AiProviderName;
 }
 
 export const aiSettingsService = {

@@ -43,19 +43,19 @@ export const DashboardLayout: React.FC = () => {
       name: 'Unified Inbox',
       path: '/chat',
       icon: MessageSquare,
-      badge: '3 Live',
+      badge: '0',
     },
     {
       name: 'Social Comments',
       path: '/comments',
       icon: MessageCircle,
-      badge: 'FB & IG',
+      badge: '0',
     },
     {
       name: 'Orders',
       path: '/orders',
       icon: ShoppingBag,
-      badge: 'Bot Auto',
+      badge: '0',
     },
     {
       name: 'Inventory',
@@ -86,7 +86,7 @@ export const DashboardLayout: React.FC = () => {
         <CanvasLogo size={34} showText />
         <div className="flex items-center gap-2">
           <span className="px-2 py-1 bg-[#F81B57]/10 text-[#F81B57] text-[10px] font-bold rounded-lg border border-[#F81B57]/30">
-            {role.toUpperCase()}
+            {(role ?? '').toUpperCase()}
           </span>
 
           <button
@@ -120,7 +120,7 @@ export const DashboardLayout: React.FC = () => {
           {/* Current Role Indicator (read-only) */}
           <div className="mb-5 p-3 rounded-xl bg-slate-100 dark:bg-[#1D1C3D] border border-slate-200 dark:border-[#2D2C57]">
             <div className="flex items-center gap-2">
-              {role === 'admin' ? (
+              {role === 'admin' || role === 'superadmin' ? (
                 <ShieldCheck className="w-4 h-4 text-[#F81B57]" />
               ) : (
                 <UserCheck className="w-4 h-4 text-indigo-400" />
@@ -131,7 +131,7 @@ export const DashboardLayout: React.FC = () => {
                   {role}
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  {role === 'admin' ? 'Full Access Granted' : 'Moderator Scope'}
+                  {role === 'admin' || role === 'superadmin' ? 'Full Access Granted' : 'Moderator Scope'}
                 </p>
               </div>
             </div>
@@ -152,7 +152,7 @@ export const DashboardLayout: React.FC = () => {
           <nav className="space-y-1">
             <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2 flex items-center justify-between">
               <span>Navigation Menu</span>
-              <span className="text-[9px] font-mono text-slate-500">{allNavItems.length} links</span>
+              {/* <span className="text-[9px] font-mono text-slate-500">{allNavItems.length} links</span>/ */}
             </p>
 
             {allNavItems.map((item) => {
