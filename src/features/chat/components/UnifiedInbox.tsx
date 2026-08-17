@@ -5,7 +5,6 @@ import {
   Bot,
   UserCheck,
   Search,
-  Smartphone,
 } from 'lucide-react';
 
 // Channel Types
