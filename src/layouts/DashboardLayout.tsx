@@ -23,6 +23,7 @@ import {
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import CanvasLogo from '@/components/common/CanvasLogo';
+import ConnectionStatusBadge from '@/components/common/ConnectionStatusBadge';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -246,10 +247,7 @@ export const DashboardLayout: React.FC = () => {
 
             <div className="h-4 w-px bg-slate-200 dark:bg-[#27264D] mx-0.5" />
 
-            <Badge variant="brand" size="sm" className="gap-1.5 px-3 py-1">
-              <span className="w-1.5 h-1.5 bg-[#F81B57] rounded-full animate-ping" />
-              NestJS Backend Active
-            </Badge>
+            <ConnectionStatusBadge />
 
             <button className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-[#201F42] relative">
               <Bell className="w-4.5 h-4.5" />
