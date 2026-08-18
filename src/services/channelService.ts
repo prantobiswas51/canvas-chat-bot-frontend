@@ -30,6 +30,17 @@ export const channelService = {
     const { data } = await apiClient.post<ChannelAccountSummary>('/channels', payload);
     return data;
   },
+
+  // Backend upserts by (channel, externalAccountId) — reuse create() for
+  // edits too, just resubmitting the same channel+ID with updated fields.
+  async update(payload: CreateChannelPayload): Promise<ChannelAccountSummary> {
+    const { data } = await apiClient.post<ChannelAccountSummary>('/channels', payload);
+    return data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete(`/channels/${id}`);
+  },
 };
 
 export default channelService;

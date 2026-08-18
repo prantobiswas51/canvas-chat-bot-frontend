@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Radio, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { Plus, Radio, X, Loader2, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -42,8 +42,10 @@ export const ChannelsPanel: React.FC = () => {
   const [channels, setChannels] = useState<ChannelAccountSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
@@ -60,13 +62,35 @@ export const ChannelsPanel: React.FC = () => {
     loadChannels();
   }, []);
 
+  const openAddForm = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (c: ChannelAccountSummary) => {
+    setEditingId(c.id);
+    // accessToken never comes back from the API (write-only) — leave blank;
+    // an empty submit keeps whatever token is already stored server-side.
+    setForm({ channel: c.channel, externalAccountId: c.externalAccountId, displayName: c.displayName, accessToken: '' });
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+  };
+
   const handleSubmit = async () => {
     if (!form.externalAccountId.trim() || !form.displayName.trim()) return;
 
     setIsSaving(true);
     setError(null);
     try {
-      const saved = await channelService.create({
+      // Backend upserts by (channel, externalAccountId), so create/update
+      // are the same call — editing just resubmits that same pair.
+      const saved = await channelService.update({
         channel: form.channel,
         externalAccountId: form.externalAccountId.trim(),
         displayName: form.displayName.trim(),
@@ -75,12 +99,27 @@ export const ChannelsPanel: React.FC = () => {
       setChannels((prev) => [saved, ...prev.filter((c) => c.id !== saved.id)]);
       setJustSavedId(saved.id);
       setTimeout(() => setJustSavedId(null), 3000);
-      setForm(emptyForm);
-      setIsFormOpen(false);
+      closeForm();
     } catch {
       setError('Could not save this channel — check the fields and try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (c: ChannelAccountSummary) => {
+    if (!window.confirm(`Remove "${c.displayName}"? Incoming messages on this channel will stop being tracked.`)) return;
+
+    setDeletingId(c.id);
+    setError(null);
+    try {
+      await channelService.remove(c.id);
+      setChannels((prev) => prev.filter((ch) => ch.id !== c.id));
+      if (editingId === c.id) closeForm();
+    } catch {
+      setError('Could not remove this channel — please try again.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -114,6 +153,30 @@ export const ChannelsPanel: React.FC = () => {
         </span>
       ),
     },
+    {
+      header: '',
+      cell: (c) => (
+        <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => openEditForm(c)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#F81B57] hover:bg-slate-100 dark:hover:bg-[#1C1B3D] cursor-pointer"
+            title="Edit"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDelete(c)}
+            disabled={deletingId === c.id}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-[#1C1B3D] cursor-pointer disabled:opacity-50"
+            title="Remove"
+          >
+            {deletingId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -128,7 +191,7 @@ export const ChannelsPanel: React.FC = () => {
           variant={isFormOpen ? 'outline' : 'primary'}
           size="sm"
           leftIcon={isFormOpen ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-          onClick={() => setIsFormOpen((v) => !v)}
+          onClick={() => (isFormOpen ? closeForm() : openAddForm())}
         >
           {isFormOpen ? 'Cancel' : 'Add Channel'}
         </Button>
@@ -169,8 +232,12 @@ export const ChannelsPanel: React.FC = () => {
                 <button
                   key={ch}
                   type="button"
+                  disabled={!!editingId}
                   onClick={() => setForm((f) => ({ ...f, channel: ch }))}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                  title={editingId ? "Channel type can't be changed while editing — remove and re-add instead" : undefined}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    editingId ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                  } ${
                     form.channel === ch
                       ? 'bg-[#F81B57] border-[#F81B57] text-white'
                       : 'border-slate-300 dark:border-[#27264D] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1C1B3D]'
@@ -196,21 +263,22 @@ export const ChannelsPanel: React.FC = () => {
               helperText={CHANNEL_META[form.channel].idHelp}
               value={form.externalAccountId}
               onChange={(e) => setForm((f) => ({ ...f, externalAccountId: e.target.value }))}
+              disabled={!!editingId}
               required
             />
           </div>
 
           <Input
             type="password"
-            label="Access Token (optional)"
-            placeholder="Paste the Page/WhatsApp access token"
-            helperText="Stored for future per-channel sending. Outbound sends currently still use the token in your backend .env file."
+            label={`Access Token${editingId ? ' (leave blank to keep current)' : ''}`}
+            placeholder={editingId ? '••••••••••••' : 'Paste the Page/WhatsApp access token'}
+            helperText="Each Page/number has its own token — used directly for sending/receiving on this channel."
             value={form.accessToken}
             onChange={(e) => setForm((f) => ({ ...f, accessToken: e.target.value }))}
           />
 
           <div className="flex items-center justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" size="sm" onClick={() => setIsFormOpen(false)}>
+            <Button type="button" variant="ghost" size="sm" onClick={closeForm}>
               Cancel
             </Button>
             <Button
@@ -221,7 +289,7 @@ export const ChannelsPanel: React.FC = () => {
               onClick={handleSubmit}
               leftIcon={!isSaving ? <Plus className="w-3.5 h-3.5" /> : undefined}
             >
-              {isSaving ? 'Saving...' : 'Save Channel'}
+              {isSaving ? 'Saving...' : editingId ? 'Update Channel' : 'Save Channel'}
             </Button>
           </div>
         </div>
