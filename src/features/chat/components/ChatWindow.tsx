@@ -9,7 +9,7 @@ export interface ChatWindowProps {
   onSendMessage: (text: string, attachment?: ChatAttachment) => void;
   onSimulateCustomer?: (text: string) => void;
   onToggleStatus: (status: ConversationStatus) => void;
-  onAssignModerator?: (moderatorId: string) => void;
+  onAssignModerator?: (moderatorId: string | null) => void;
   moderators?: Moderator[];
 }
 
@@ -64,7 +64,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     }
   };
 
-  const activeModerator = conversation.assignedModerator || moderators.find((m) => m.id === conversation.assignedModeratorId) || moderators[0];
+  // No `|| moderators[0]` fallback — an unassigned chat (handled by the AI)
+  // should never render as if the first moderator in the list "owns" it.
+  const activeModerator =
+    conversation.assignedModerator ?? moderators.find((m) => m.id === conversation.assignedModeratorId);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +100,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setInputText((prev) => prev + emoji);
   };
 
-  const handleSelectModerator = (modId: string) => {
+  const handleSelectModerator = (modId: string | null) => {
     if (onAssignModerator) {
       onAssignModerator(modId);
     }
@@ -223,7 +226,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               <Shield className="w-3.5 h-3.5 text-[#F81B57]" />
               <span className="hidden sm:inline text-slate-400 font-normal">Assigned:</span>
               <span className="truncate max-w-[120px]">
-                {activeModerator ? activeModerator.name : 'Unassigned'}
+                {conversation.assignedModeratorId ? activeModerator?.name ?? 'Unassigned' : 'Canvas AI Bot'}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </button>
@@ -237,6 +240,29 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     <span className="text-[#F81B57] font-mono">{moderators.length} Staff</span>
                   </p>
                 </div>
+
+                {/* Hands the chat back to the AI — clears assignedModeratorId
+                    and flips status to ai_active on the backend, undoing
+                    whatever moderator claim/human takeover was in place. */}
+                <button
+                  type="button"
+                  onClick={() => handleSelectModerator(null)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer mb-1 ${
+                    !conversation.assignedModeratorId
+                      ? 'bg-[#F81B57]/10 dark:bg-[#F81B57]/20 border border-[#F81B57]/30 text-[#F81B57] font-semibold'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#F81B57]/10 flex items-center justify-center text-xs shrink-0">
+                    🤖
+                  </div>
+                  <div>
+                    <p className="leading-tight">Canvas AI Bot</p>
+                    <span className="text-[9px] text-slate-400 block font-mono">Auto-reply, no moderator</span>
+                  </div>
+                </button>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 my-1" />
 
                 {moderators.map((mod) => {
                   const isCurrent = activeModerator?.id === mod.id;

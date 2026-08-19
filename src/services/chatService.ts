@@ -29,7 +29,9 @@ export const chatService = {
     await apiClient.patch(`/conversations/${conversationId}/status`, { status });
   },
 
-  async assignModerator(conversationId: string, moderatorId: string): Promise<void> {
+  // moderatorId: null hands the conversation back to the AI (backend also
+  // resets status to ai_active — see ChatService.assignModerator).
+  async assignModerator(conversationId: string, moderatorId: string | null): Promise<void> {
     await apiClient.patch(`/conversations/${conversationId}/assign`, { moderatorId });
   },
 };

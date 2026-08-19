@@ -183,23 +183,37 @@ export const ChatPage: React.FC = () => {
   );
 
   const handleAssignModerator = useCallback(
-    async (moderatorId: string) => {
+    async (moderatorId: string | null) => {
       if (!selectedConversationId) return;
 
-      const previous = conversations.find((c) => c.id === selectedConversationId)?.assignedModeratorId;
+      const current = conversations.find((c) => c.id === selectedConversationId);
+      const previousModeratorId = current?.assignedModeratorId;
+      const previousStatus = current?.status;
 
-      // Optimistic update — revert if the save fails.
+      // Optimistic update — revert if the save fails. Reassigning to AI
+      // (moderatorId: null) also flips status back to ai_active, matching
+      // what the backend does (see ChatService.assignModerator).
       setConversations((prev) =>
-        prev.map((c) => (c.id === selectedConversationId ? { ...c, assignedModeratorId: moderatorId } : c)),
+        prev.map((c) =>
+          c.id === selectedConversationId
+            ? {
+                ...c,
+                assignedModeratorId: moderatorId ?? undefined,
+                status: moderatorId ? c.status : 'ai_active',
+              }
+            : c,
+        ),
       );
 
       try {
         await chatService.assignModerator(selectedConversationId, moderatorId);
       } catch {
-        setError('Could not assign the moderator.');
+        setError(moderatorId ? 'Could not assign the moderator.' : 'Could not reassign this chat to AI.');
         setConversations((prev) =>
           prev.map((c) =>
-            c.id === selectedConversationId ? { ...c, assignedModeratorId: previous } : c,
+            c.id === selectedConversationId
+              ? { ...c, assignedModeratorId: previousModeratorId, status: previousStatus ?? c.status }
+              : c,
           ),
         );
       }
