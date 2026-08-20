@@ -24,6 +24,19 @@ export interface ChatMessage {
   attachment?: ChatAttachment;
 }
 
+// Captured once, off the first message of the conversation, when the
+// customer arrived by tapping a Click-to-WhatsApp / Click-to-Messenger ad —
+// mirrors the backend's AdReferral shape (see conversation.entity.ts).
+export interface AdReferral {
+  platform: 'whatsapp' | 'messenger';
+  source?: string;
+  adId?: string;
+  headline?: string;
+  body?: string;
+  mediaUrl?: string;
+  ctwaClid?: string;
+}
+
 export interface LeadSource {
   type: 'meta_ad' | 'google_ad' | 'organic_social' | 'direct_whatsapp' | 'website_widget';
   platformName: string;
@@ -89,4 +102,5 @@ export interface Conversation {
   channel: ChannelType;
   messages: ChatMessage[];
   leadSource?: LeadSource;
+  adReferral?: AdReferral;
 }

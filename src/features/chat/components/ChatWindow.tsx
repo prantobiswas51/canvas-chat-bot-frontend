@@ -311,6 +311,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 </div>
               )}
             </p>
+
+            {/* Ad attribution — only present when this conversation started
+                from a Click-to-WhatsApp/Messenger ad (see WebhookService's
+                referral capture on the backend). Sits right under the
+                Assigned selector so agents immediately see why this
+                customer reached out. */}
+            {conversation.adReferral && (
+              <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-[#F81B57] max-w-[260px]">
+                <Megaphone className="w-3 h-3 shrink-0" />
+                <span className="truncate font-semibold">
+                  {conversation.adReferral.headline || 'Started from an ad'}
+                </span>
+                {conversation.adReferral.adId && (
+                  <span className="text-slate-400 font-mono shrink-0">· {conversation.adReferral.adId}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
