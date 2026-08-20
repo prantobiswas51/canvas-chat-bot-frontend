@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Conversation, ConversationStatus, ChatAttachment, Moderator } from '@/types/chat';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
-import { Send, Bot, UserCheck, AlertTriangle, Paperclip, Smile, X, FileText, Image as ImageIcon, Shield, ChevronDown, Megaphone, ZoomIn } from 'lucide-react';
+import { Send, Bot, AlertTriangle, Paperclip, Smile, X, FileText, Image as ImageIcon, Shield, ChevronDown, Megaphone, ZoomIn } from 'lucide-react';
 
 export interface ChatWindowProps {
   conversation: Conversation;
@@ -22,7 +22,6 @@ const EMOJI_LIST = [
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   onSendMessage,
-  onToggleStatus,
   onAssignModerator,
   moderators = [],
 }) => {
