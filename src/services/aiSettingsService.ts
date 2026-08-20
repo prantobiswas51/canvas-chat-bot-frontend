@@ -1,6 +1,8 @@
 import apiClient from '@/services/apiClient';
 
-export type AiProviderName = 'openai' | 'gemini' | 'claude';
+// OpenAI/Claude removed while debugging Gemini 429s — backend only accepts
+// 'gemini' now (see ai-settings entity/dto on the backend).
+export type AiProviderName = 'gemini';
 
 export interface AiSettings {
   id: string;

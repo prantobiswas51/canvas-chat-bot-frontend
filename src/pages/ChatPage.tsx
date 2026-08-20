@@ -190,16 +190,19 @@ export const ChatPage: React.FC = () => {
       const previousModeratorId = current?.assignedModeratorId;
       const previousStatus = current?.status;
 
-      // Optimistic update — revert if the save fails. Reassigning to AI
-      // (moderatorId: null) also flips status back to ai_active, matching
-      // what the backend does (see ChatService.assignModerator).
+      // Optimistic update — revert if the save fails. Mirrors what the
+      // backend does (see ChatService.assignModerator): assigning a real
+      // moderator flips status to human_moderator, clearing it (null) flips
+      // status back to ai_active. Without this, the chat list's status
+      // badge (which reads status, not assignedModeratorId) stayed stuck on
+      // "AI Active" after assigning someone.
       setConversations((prev) =>
         prev.map((c) =>
           c.id === selectedConversationId
             ? {
                 ...c,
                 assignedModeratorId: moderatorId ?? undefined,
-                status: moderatorId ? c.status : 'ai_active',
+                status: moderatorId ? 'human_moderator' : 'ai_active',
               }
             : c,
         ),

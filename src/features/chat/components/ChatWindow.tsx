@@ -69,6 +69,16 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const activeModerator =
     conversation.assignedModerator ?? moderators.find((m) => m.id === conversation.assignedModeratorId);
 
+  // Three states for the header badge: a specific moderator has claimed the
+  // chat ("Human"), nobody has and the AI is actively replying ("AI"), or
+  // nobody has and the AI isn't replying either — e.g. status is
+  // 'resolved', or AI Instructions' global toggle is off — ("Unassigned").
+  const assignmentState: 'human' | 'ai' | 'unassigned' = conversation.assignedModeratorId
+    ? 'human'
+    : conversation.status === 'ai_active'
+      ? 'ai'
+      : 'unassigned';
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() && !selectedAttachment) return;
@@ -141,16 +151,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
         const payload = JSON.parse(jsonStr);
         if (payload.type === 'product' && payload.product) {
           const prod = payload.product;
-          const text = `📦 **Product Inquiry**: ${prod.name}\nSKU: \`${prod.sku}\` | Price: ৳${prod.price} ${prod.currency || 'BDT'} [In Stock: ${prod.stock}]${
-            prod.url ? `\n🔗 ${prod.url}` : ''
-          }`;
+          const text = `📦 **Product Inquiry**: ${prod.name}\nSKU: \`${prod.sku}\` | Price: ৳${prod.price} ${prod.currency || 'BDT'} [In Stock: ${prod.stock}]${prod.url ? `\n🔗 ${prod.url}` : ''
+            }`;
           const attachment: ChatAttachment | undefined = prod.imageUrl
             ? {
-                name: prod.name,
-                url: prod.imageUrl,
-                type: 'image',
-                size: `৳${prod.price} BDT`,
-              }
+              name: prod.name,
+              url: prod.imageUrl,
+              type: 'image',
+              size: `৳${prod.price} BDT`,
+            }
             : undefined;
 
           onSendMessage(text, attachment);
@@ -203,37 +212,33 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-sm text-slate-900 dark:text-slate-100">{conversation.customer.name}</h2>
-              <span className="text-[11px] text-slate-500 font-mono uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+              {/* <span className="text-[11px] text-slate-500 font-mono uppercase bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                 {conversation.channel}
-              </span>
+              </span> */}
             </div>
-            <p className="text-xs text-slate-500">
-              Orders: <span className="text-indigo-500 font-medium">{conversation.customer.totalOrders}</span> | 
-              Spent: <span className="text-emerald-500 font-medium">৳{conversation.customer.totalSpent} BDT</span>
-            </p>
-          </div>
-        </div>
+            <p className="text-xs text-slate-500 relative">
+              <button
+                type="button"
+                onClick={() => setShowModeratorDropdown(!showModeratorDropdown)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:border-[#F81B57] transition-all cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5 text-[#F81B57]" />
+                <span className="hidden sm:inline text-slate-400 font-normal">Assigned:</span>
+                <span className="truncate max-w-[120px]">
+                  {conversation.assignedModeratorId ? activeModerator?.name ?? 'Unassigned' : 'Canvas AI Bot'}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
 
-        {/* Mode & Assigned Moderator Controls */}
-        <div className="flex items-center gap-2">
-          {/* Moderator Assignment Selector Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowModeratorDropdown(!showModeratorDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-200 hover:border-[#F81B57] transition-all cursor-pointer"
-            >
-              <Shield className="w-3.5 h-3.5 text-[#F81B57]" />
-              <span className="hidden sm:inline text-slate-400 font-normal">Assigned:</span>
-              <span className="truncate max-w-[120px]">
-                {conversation.assignedModeratorId ? activeModerator?.name ?? 'Unassigned' : 'Canvas AI Bot'}
-              </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </button>
+              {/* Orders: <span className="text-indigo-500 font-medium">{conversation.customer.totalOrders}</span> */}
+              {/* Spent: <span className="text-emerald-500 font-medium">৳{conversation.customer.totalSpent} BDT</span> */}
 
-            {/* Moderator Picker Popover */}
-            {showModeratorDropdown && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-2 space-y-1">
+              {/* Moderator Picker Popover — anchored to this button (which
+                  sits on the left side of the header) instead of the Badge
+                  on the right, and opens from the left edge so it doesn't
+                  get clipped by the viewport. */}
+              {showModeratorDropdown && (
+                <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-2 space-y-1 text-left normal-case">
                 <div className="px-2 py-1 border-b border-slate-100 dark:border-slate-800 mb-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
                     <span>Assign Team Moderator</span>
@@ -247,11 +252,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <button
                   type="button"
                   onClick={() => handleSelectModerator(null)}
-                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer mb-1 ${
-                    !conversation.assignedModeratorId
+                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer mb-1 ${!conversation.assignedModeratorId
                       ? 'bg-[#F81B57]/10 dark:bg-[#F81B57]/20 border border-[#F81B57]/30 text-[#F81B57] font-semibold'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                  }`}
+                    }`}
                 >
                   <div className="w-6 h-6 rounded-full bg-[#F81B57]/10 flex items-center justify-center text-xs shrink-0">
                     🤖
@@ -272,11 +276,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                       key={mod.id}
                       type="button"
                       onClick={() => handleSelectModerator(mod.id)}
-                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${
-                        isCurrent
+                      className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${isCurrent
                           ? 'bg-[#F81B57]/10 dark:bg-[#F81B57]/20 border border-[#F81B57]/30 text-[#F81B57] font-semibold'
                           : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         <div className="relative">
@@ -284,13 +287,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                             {mod.isAi ? '🤖' : mod.name.substring(0, 2).toUpperCase()}
                           </div>
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-slate-900 ${
-                              mod.status === 'online'
+                            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-white dark:border-slate-900 ${mod.status === 'online'
                                 ? 'bg-emerald-500'
                                 : mod.status === 'busy'
-                                ? 'bg-amber-500'
-                                : 'bg-slate-400'
-                            }`}
+                                  ? 'bg-amber-500'
+                                  : 'bg-slate-400'
+                              }`}
                           />
                         </div>
                         <div>
@@ -307,11 +309,23 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     </button>
                   );
                 })}
-              </div>
-            )}
+                </div>
+              )}
+            </p>
           </div>
+        </div>
 
-          {conversation.status === 'ai_active' ? (
+        {/* Mode & Assigned Moderator Controls */}
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={assignmentState === 'human' ? 'danger' : assignmentState === 'ai' ? 'success' : 'neutral'}
+            size="sm"
+            dot
+          >
+            {assignmentState === 'human' ? 'Human' : assignmentState === 'ai' ? 'AI' : 'Unassigned'}
+          </Badge>
+
+          {/* {conversation.status === 'ai_active' ? (
             <Button variant="outline" size="sm" leftIcon={<UserCheck className="w-3.5 h-3.5 text-amber-500" />}
               onClick={() => onToggleStatus('human_moderator')}>
               Take Over (Human Mode)
@@ -321,15 +335,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               onClick={() => onToggleStatus('ai_active')}>
               Enable Canvas AI Bot
             </Button>
-          )}
+          )} */}
 
-          {conversation.status === 'ai_active' ? (
+          {/* {conversation.status === 'ai_active' ? (
             <Badge variant="indigo" size="sm" dot>AI Consultant Active</Badge>
           ) : conversation.status === 'human_moderator' ? (
             <Badge variant="warning" size="sm" dot>Human Moderator Active</Badge>
           ) : (
             <Badge variant="neutral" size="sm">Resolved</Badge>
-          )}
+          )} */}
+
+
         </div>
       </div>
 
@@ -414,13 +430,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 )}
               </div>
 
-              <div className={`max-w-md lg:max-w-lg rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                isCustomer
+              <div className={`max-w-md lg:max-w-lg rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${isCustomer
                   ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'
                   : isBot
-                  ? 'bg-indigo-50 dark:bg-indigo-950/90 border border-indigo-200 dark:border-indigo-800/80 text-indigo-900 dark:text-indigo-100 rounded-tr-none'
-                  : 'bg-[#F81B57] text-white rounded-tr-none shadow-md shadow-[#F81B57]/20'
-              }`}>
+                    ? 'bg-indigo-50 dark:bg-indigo-950/90 border border-indigo-200 dark:border-indigo-800/80 text-indigo-900 dark:text-indigo-100 rounded-tr-none'
+                    : 'bg-[#F81B57] text-white rounded-tr-none shadow-md shadow-[#F81B57]/20'
+                }`}>
                 {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
 
                 {/* Render Attachment if present */}
@@ -554,11 +569,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           type="button"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           title="Select Emojis"
-          className={`p-2.5 mb-0.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
-            showEmojiPicker
+          className={`p-2.5 mb-0.5 rounded-xl transition-colors cursor-pointer shrink-0 ${showEmojiPicker
               ? 'text-[#F81B57] bg-pink-50 dark:bg-pink-950/60'
               : 'text-slate-500 dark:text-slate-400 hover:text-[#F81B57] hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Smile className="w-4 h-4" />
         </button>
