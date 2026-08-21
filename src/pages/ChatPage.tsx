@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import ConversationList from '@/features/chat/components/ConversationList';
 import ChatWindow from '@/features/chat/components/ChatWindow';
@@ -37,6 +38,12 @@ function toModerator(user: User): Moderator {
 }
 
 export const ChatPage: React.FC = () => {
+  // Set when arriving from "View Chat" on the Orders page (/chat?conversationId=...)
+  // — lets that link jump straight to the order's actual conversation instead
+  // of always landing on whichever one loads first.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedConversationId = searchParams.get('conversationId');
+
   const [selectedCategory, setSelectedCategory] = useState<ConversationCategory>('all');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -62,7 +69,14 @@ export const ChatPage: React.FC = () => {
       .then((data) => {
         if (cancelled) return;
         setConversations(data);
-        if (data.length > 0) setSelectedConversationId(data[0].id);
+        // Deep-link takes priority over "just pick the first one" — falls
+        // back to the first conversation if the requested ID isn't in the
+        // list (e.g. a stale/bad link) instead of showing nothing.
+        const requested = requestedConversationId && data.some((c) => c.id === requestedConversationId)
+          ? requestedConversationId
+          : undefined;
+        if (requested) setSelectedConversationId(requested);
+        else if (data.length > 0) setSelectedConversationId(data[0].id);
       })
       .catch(() => {
         if (!cancelled) setError('Could not load conversations from the server.');
@@ -75,6 +89,23 @@ export const ChatPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  // Handles clicking "View Chat" again while already on /chat — React
+  // Router updates the URL/searchParams without remounting the page, so the
+  // mount-only effect above wouldn't otherwise notice a new target. Clears
+  // the param afterward so it doesn't keep overriding manual conversation
+  // clicks in the list.
+  useEffect(() => {
+    if (!requestedConversationId) return;
+    if (!conversations.some((c) => c.id === requestedConversationId)) return;
+
+    setSelectedConversationId(requestedConversationId);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('conversationId');
+      return next;
+    }, { replace: true });
+  }, [requestedConversationId, conversations, setSearchParams]);
 
   // Load the team roster once for the "Assign Moderator" dropdown.
   useEffect(() => {

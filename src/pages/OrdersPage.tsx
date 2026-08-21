@@ -182,7 +182,7 @@ export const OrdersPage: React.FC = () => {
       cell: (order) =>
         order.conversationId ? (
           <button
-            onClick={() => navigate('/chat')}
+            onClick={() => navigate(`/chat?conversationId=${order.conversationId}`)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-400/60 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 transition-all cursor-pointer shadow-sm"
             title="View the conversation this order came from"
           >
