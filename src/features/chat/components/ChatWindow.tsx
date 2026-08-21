@@ -31,6 +31,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [showModeratorDropdown, setShowModeratorDropdown] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,23 +86,46 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     onSendMessage(inputText.trim(), selectedAttachment || undefined);
     setInputText('');
     setSelectedAttachment(null);
+    setAttachmentError(null);
     setShowEmojiPicker(false);
+  };
+
+  // WhatsApp caps outbound images at 5MB — reject bigger files up front
+  // instead of letting a huge base64 payload fail confusingly later.
+  const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
+  // Reads the file into a `data:<mime>;base64,...` URI rather than
+  // URL.createObjectURL's blob: URL — a blob URL only exists inside this
+  // browser tab, so once it's sent to the backend it's a dead link the
+  // server (and Meta's API) can't fetch. Base64 travels with the message
+  // itself, so the backend can forward the actual bytes on to WhatsApp/
+  // Messenger — see DispatchService.sendReply.
+  const readFileAsAttachment = (file: File) => {
+    setAttachmentError(null);
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setAttachmentError(`"${file.name}" is over 5MB — Meta won't accept an image that large.`);
+      return;
+    }
+
+    const isImage = file.type.startsWith('image/');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSelectedAttachment({
+        name: file.name,
+        url: reader.result as string,
+        type: isImage ? 'image' : 'file',
+        size: `${(file.size / 1024).toFixed(1)} KB`,
+      });
+    };
+    reader.onerror = () => setAttachmentError(`Couldn't read "${file.name}" — try again.`);
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const isImage = file.type.startsWith('image/');
-    const previewUrl = URL.createObjectURL(file);
-
-    setSelectedAttachment({
-      name: file.name,
-      url: previewUrl,
-      type: isImage ? 'image' : 'file',
-      size: `${(file.size / 1024).toFixed(1)} KB`,
-    });
-
+    readFileAsAttachment(file);
     e.target.value = '';
   };
 
@@ -133,14 +157,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
     setIsDraggingOver(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      const isImage = file.type.startsWith('image/');
-      setSelectedAttachment({
-        name: file.name,
-        url: URL.createObjectURL(file),
-        type: isImage ? 'image' : 'file',
-        size: `${(file.size / 1024).toFixed(1)} KB`,
-      });
+      readFileAsAttachment(e.dataTransfer.files[0]);
       return;
     }
 
@@ -543,6 +560,20 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {emoji}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Attachment Error */}
+      {attachmentError && (
+        <div className="px-4 py-2 bg-rose-50 dark:bg-rose-950/40 border-t border-rose-200 dark:border-rose-900 flex items-center justify-between gap-3 text-xs text-rose-600 dark:text-rose-400">
+          <span className="truncate">{attachmentError}</span>
+          <button
+            type="button"
+            onClick={() => setAttachmentError(null)}
+            className="text-rose-400 hover:text-rose-600 p-1 rounded-full cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
