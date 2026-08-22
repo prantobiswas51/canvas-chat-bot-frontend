@@ -101,5 +101,8 @@ export function withDummyCrmData(customer: CustomerProfile): CustomerProfile {
     email: customer.email,
     channel: customer.channel,
     tags: customer.tags.length > 0 ? customer.tags : dummy.tags,
+    // Real (persisted, team-editable) now — see CustomerInfoPanel's Internal
+    // Notes section — so it must win over the dummy placeholder text.
+    notes: customer.notes,
   };
 }

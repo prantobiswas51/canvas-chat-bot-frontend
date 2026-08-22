@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
+  Terminal,
 } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -67,6 +68,11 @@ export const DashboardLayout: React.FC = () => {
       name: 'Users',
       path: '/users',
       icon: Users,
+    },
+    {
+      name: 'Log Book',
+      path: '/logbook',
+      icon: Terminal,
     },
     {
       name: 'AI Training & Settings',

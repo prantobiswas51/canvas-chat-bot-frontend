@@ -34,6 +34,11 @@ export interface OrderStats {
   aiGenerated: number;
 }
 
+export interface CustomerOrderStats {
+  totalOrders: number;
+  totalSpent: number;
+}
+
 export interface ListOrdersParams {
   page?: number;
   limit?: number;
@@ -60,6 +65,11 @@ export const orderService = {
 
   async stats(): Promise<OrderStats> {
     const { data } = await apiClient.get<OrderStats>('/orders/stats');
+    return data;
+  },
+
+  async customerStats(customerId: string): Promise<CustomerOrderStats> {
+    const { data } = await apiClient.get<CustomerOrderStats>(`/orders/customer/${customerId}/stats`);
     return data;
   },
 

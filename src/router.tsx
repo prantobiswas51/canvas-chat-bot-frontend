@@ -9,6 +9,7 @@ import CommentsPage from '@/pages/CommentsPage';
 import OrdersPage from '@/pages/OrdersPage';
 import InventoryPage from '@/pages/InventoryPage';
 import UsersPage from '@/pages/UsersPage';
+import LogBookPage from '@/pages/LogBookPage';
 import SettingsPage from '@/pages/SettingsPage';
 import LoginPage from '@/pages/LoginPage';
 import SignupPage from '@/pages/SignupPage';
@@ -76,6 +77,10 @@ export const router = createBrowserRouter([
           {
             path: '/users',
             element: <UsersPage />,
+          },
+          {
+            path: '/logbook',
+            element: <LogBookPage />,
           },
           {
             path: '/settings',

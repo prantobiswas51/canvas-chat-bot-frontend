@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CustomerProfile } from '@/types/chat';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import { Phone, Mail, ShoppingBag, MapPin, Crown, Palette, PackageCheck, Copy, Check, FileText, Megaphone } from 'lucide-react';
+import { Phone, Mail, ShoppingBag, MapPin, Crown, Palette, PackageCheck, Copy, Check, Megaphone } from 'lucide-react';
 import TemporaryInventoryWidget from '@/components/TemporaryInventoryWidget';
+import InternalNotesCard from '@/features/chat/components/InternalNotesCard';
+import orderService from '@/services/orderService';
 
 export interface CustomerInfoPanelProps {
   customer: CustomerProfile;
@@ -12,16 +14,32 @@ export interface CustomerInfoPanelProps {
 
 export const CustomerInfoPanel: React.FC<CustomerInfoPanelProps> = ({ customer, onSendMessage }) => {
   const [copiedAddress, setCopiedAddress] = useState(false);
+  // Orders/Spent used to be deterministic-but-fake dummy numbers (see
+  // withDummyCrmData.ts) — these are the real ones, fetched per customer.
+  // null while loading/on a customer we haven't fetched for yet.
+  const [realOrderStats, setRealOrderStats] = useState<{ totalOrders: number; totalSpent: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRealOrderStats(null);
+    orderService
+      .customerStats(customer.id)
+      .then((stats) => {
+        if (!cancelled) setRealOrderStats(stats);
+      })
+      .catch(() => {
+        // Fail soft — the tiles just show a dash rather than blocking the panel.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customer.id]);
 
   const handleCopyAddress = (addr: string) => {
     navigator.clipboard.writeText(addr);
     setCopiedAddress(true);
     setTimeout(() => setCopiedAddress(false), 2000);
   };
-
-  const avgOrderValue = customer.totalOrders > 0
-    ? Math.round(customer.totalSpent / customer.totalOrders)
-    : 0;
 
   return (
     <div className="hidden xl:flex flex-col w-80 bg-slate-100 dark:bg-slate-900/90 border-l border-slate-200 dark:border-slate-800 p-4 space-y-3.5 overflow-y-auto h-full font-sans">
@@ -155,18 +173,18 @@ export const CustomerInfoPanel: React.FC<CustomerInfoPanelProps> = ({ customer, 
           </span>
         </h4>
 
-        <div className="grid grid-cols-3 gap-1.5 text-center">
+        <div className="grid grid-cols-2 gap-1.5 text-center">
           <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
             <span className="text-[9px] text-slate-500 block uppercase">Orders</span>
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{customer.totalOrders}</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              {realOrderStats ? realOrderStats.totalOrders : '—'}
+            </span>
           </div>
           <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
             <span className="text-[9px] text-slate-500 block uppercase">Spent</span>
-            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">৳{customer.totalSpent}</span>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800">
-            <span className="text-[9px] text-slate-500 block uppercase">Avg Order</span>
-            <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">৳{avgOrderValue}</span>
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+              {realOrderStats ? `৳${realOrderStats.totalSpent.toLocaleString()}` : '—'}
+            </span>
           </div>
         </div>
 
@@ -187,27 +205,22 @@ export const CustomerInfoPanel: React.FC<CustomerInfoPanelProps> = ({ customer, 
         )}
       </Card>
 
-      {/* 3. Art Specialty & CRM Agent Notes */}
-      {(customer.preferredMedium || customer.notes) && (
+      {/* 3. Art Specialty (still mock — no real data source for this yet) */}
+      {customer.preferredMedium && (
         <Card className="p-3.5 space-y-2 text-xs">
-          {customer.preferredMedium && (
-            <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-              <Palette className="w-3.5 h-3.5 text-purple-500 shrink-0" />
-              <span className="font-medium">Art Specialty:</span>
-              <span className="text-purple-600 dark:text-purple-300 font-semibold truncate">{customer.preferredMedium}</span>
-            </div>
-          )}
-
-          {customer.notes && (
-            <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[11px] text-amber-800 dark:text-amber-200 flex items-start gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="leading-snug">{customer.notes}</p>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+            <Palette className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+            <span className="font-medium">Art Specialty:</span>
+            <span className="text-purple-600 dark:text-purple-300 font-semibold truncate">{customer.preferredMedium}</span>
+          </div>
         </Card>
       )}
 
-      {/* 4. Embedded Temporary Inventory & Offers Lookup Widget */}
+      {/* 4. Internal Notes — our own note about this customer, persisted per
+          customer (not visible to them, never sent anywhere). */}
+      <InternalNotesCard customer={customer} />
+
+      {/* 5. Embedded Temporary Inventory & Offers Lookup Widget */}
       <div className="flex-1 min-h-0">
         <TemporaryInventoryWidget onSendMessage={onSendMessage} />
       </div>
