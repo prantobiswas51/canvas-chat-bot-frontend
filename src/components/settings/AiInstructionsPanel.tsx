@@ -3,21 +3,25 @@ import { MessageSquareText, Save, CheckCircle2, Loader2, Bot, Sparkles } from 'l
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import aiSettingsService from '@/services/aiSettingsService';
+import aiSettingsService, { AiProviderName } from '@/services/aiSettingsService';
+
+const PROVIDER_OPTIONS: Array<{ value: AiProviderName; label: string }> = [
+  { value: 'gemini', label: 'Gemini (Google)' },
+  { value: 'openai', label: 'GPT (OpenAI)' },
+];
 
 // The only *real* AI-configuration surface right now — this text is
 // appended to the AI bot's system prompt on every reply (see
 // webhook.service.ts). Everything else on the "Knowledge Base & AI
 // Training Hub" tab is a visual mockup, not wired to the live bot.
-//
-// OpenAI/Claude removed while debugging Gemini 429s — no provider picker
-// anymore, Gemini is the only option (see ai-reply.service.ts on the backend).
 export const AiInstructionsPanel: React.FC = () => {
   const [value, setValue] = useState('');
   const [aiEnabledByDefault, setAiEnabledByDefault] = useState(true);
+  const [aiProvider, setAiProvider] = useState<AiProviderName>('gemini');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTogglingDefault, setIsTogglingDefault] = useState(false);
+  const [isSwitchingProvider, setIsSwitchingProvider] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +33,7 @@ export const AiInstructionsPanel: React.FC = () => {
         if (cancelled) return;
         setValue(settings.customInstructions ?? '');
         setAiEnabledByDefault(settings.aiEnabledByDefault);
+        setAiProvider(settings.aiProvider);
       })
       .catch(() => {
         if (!cancelled) setError('Could not load current instructions.');
@@ -40,6 +45,22 @@ export const AiInstructionsPanel: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  const handleProviderChange = async (next: AiProviderName) => {
+    if (next === aiProvider) return;
+    const previous = aiProvider;
+    setAiProvider(next); // optimistic
+    setIsSwitchingProvider(true);
+    setError(null);
+    try {
+      await aiSettingsService.update({ aiProvider: next });
+    } catch {
+      setAiProvider(previous); // revert
+      setError('Could not switch AI provider — please try again.');
+    } finally {
+      setIsSwitchingProvider(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -84,14 +105,30 @@ export const AiInstructionsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* AI provider — Gemini only right now (OpenAI/Claude removed while
-          debugging), so this is just a fixed status row, not a picker. */}
-      <div className="p-3.5 bg-slate-50 dark:bg-[#0E0D21] border border-slate-200 dark:border-[#27274D] rounded-xl flex items-center gap-2.5">
-        <Sparkles className="w-4 h-4 text-[#F81B57] shrink-0" />
-        <div>
-          <label className="text-xs font-bold text-slate-900 dark:text-slate-100 block">AI Provider</label>
-          <p className="text-[10px] text-slate-400 mt-0.5">Gemini (Google) — the only provider wired up right now.</p>
+      {/* AI provider — switches which LLM actually generates replies, live,
+          per message (see AiReplyService.resolveAiProvider on the backend).
+          Handy for comparing GPT vs Gemini output on the same conversations. */}
+      <div className="p-3.5 bg-slate-50 dark:bg-[#0E0D21] border border-slate-200 dark:border-[#27274D] rounded-xl flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <Sparkles className="w-4 h-4 text-[#F81B57] shrink-0" />
+          <div>
+            <label className="text-xs font-bold text-slate-900 dark:text-slate-100 block">AI Provider</label>
+            <p className="text-[10px] text-slate-400 mt-0.5">Which model generates replies — takes effect on the next message.</p>
+          </div>
         </div>
+
+        <select
+          value={aiProvider}
+          onChange={(e) => handleProviderChange(e.target.value as AiProviderName)}
+          disabled={isLoading || isSwitchingProvider}
+          className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:border-[#F81B57] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+        >
+          {PROVIDER_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* AI-enabled-by-default toggle — controls the starting mode for
