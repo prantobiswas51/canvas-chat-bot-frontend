@@ -142,8 +142,16 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 </p>
 
                 <div className="flex items-center justify-between pl-9 pt-0.5">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     {getChannelBadge(conv.channel)}
+                    {conv.channelAccountName && (
+                      <span
+                        className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 px-1.5 py-0.5 rounded font-mono truncate max-w-[120px]"
+                        title={conv.channelAccountName}
+                      >
+                        {conv.channelAccountName}
+                      </span>
+                    )}
                     {getStatusBadge(conv.status)}
                     {conv.leadSource && (
                       <span className="text-[9px] font-mono text-pink-500 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/60 px-1.5 py-0.2 rounded border border-pink-200 dark:border-pink-800/40">

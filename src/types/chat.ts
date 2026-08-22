@@ -100,6 +100,10 @@ export interface Conversation {
   assignedModeratorId?: string;
   assignedModerator?: Moderator;
   channel: ChannelType;
+  // Which connected Page/number this came from (e.g. "Canvas Art Supplies FB
+  // Page" vs a second Page) — distinct from `channel`, which is just the
+  // platform type and can't tell two accounts of the same type apart.
+  channelAccountName?: string;
   messages: ChatMessage[];
   leadSource?: LeadSource;
   adReferral?: AdReferral;
