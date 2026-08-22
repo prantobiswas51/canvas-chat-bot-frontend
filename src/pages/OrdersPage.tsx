@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import orderService, { OrderRecord, OrderRecordStatus, OrderStats } from '@/services/orderService';
+import orderService, { OrderRecord, OrderRecordStatus, OrderStats, UpdateOrderPayload } from '@/services/orderService';
 import Table, { Column } from '@/components/ui/Table';
 import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
+import OrderEditModal from '@/features/orders/components/OrderEditModal';
 import {
   Search,
   MessageSquare,
@@ -15,6 +16,9 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 
 const PAGE_SIZE = 10;
@@ -62,6 +66,11 @@ export const OrdersPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<OrderStats | null>(null);
+  const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Bumped after a save/delete to force the list effect below to re-run
+  // without duplicating its fetch logic in two places.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   // Debounce free-text search before hitting the API.
   useEffect(() => {
@@ -94,7 +103,29 @@ export const OrdersPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, search, selectedStatus]);
+  }, [page, search, selectedStatus, refreshToken]);
+
+  const handleSaveOrder = async (id: string, payload: UpdateOrderPayload) => {
+    const updated = await orderService.update(id, payload);
+    setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
+  };
+
+  const handleDeleteOrder = async (order: OrderRecord) => {
+    if (!window.confirm(`Delete order ${order.invoiceId}? This can't be undone.`)) return;
+    setDeletingId(order.id);
+    setError(null);
+    try {
+      await orderService.remove(order.id);
+      // Re-run the list query rather than just filtering it out locally —
+      // keeps pagination totals/page contents correct (e.g. the next page's
+      // row shifting up to fill the gap).
+      setRefreshToken((t) => t + 1);
+    } catch {
+      setError('Could not delete the order — please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     orderService
@@ -192,6 +223,32 @@ export const OrdersPage: React.FC = () => {
         ) : (
           <span className="text-xs text-slate-400">—</span>
         ),
+    },
+    {
+      header: 'Actions',
+      cell: (order) => (
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setEditingOrder(order)}
+            title="Edit order"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => handleDeleteOrder(order)}
+            disabled={deletingId === order.id}
+            title="Delete order"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {deletingId === order.id ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+      ),
     },
   ];
 
@@ -301,6 +358,14 @@ export const OrdersPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {editingOrder && (
+        <OrderEditModal
+          order={editingOrder}
+          onClose={() => setEditingOrder(null)}
+          onSave={handleSaveOrder}
+        />
+      )}
     </div>
   );
 };
